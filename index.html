@@ -97,7 +97,7 @@
   .amt-g { color: var(--green); } .amt-r { color: var(--accent2); }
 
   .stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-bottom: 22px; }
-  @media(max-width:600px){ .stats { grid-template-columns: 1fr; } }
+  @media(max-width:600px){ .stats { grid-template-columns: 1fr; } .total-bar { flex-direction: column; align-items: flex-start; gap: 8px; } }
   .stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; }
   .stat .lbl { font-size: 0.78rem; color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
   .stat .val { font-size: 1.55rem; font-weight: 700; }
@@ -207,10 +207,8 @@
       <tbody id="all-tbody"></tbody>
     </table>
     <div class="total-bar" style="flex-wrap:wrap;gap:12px">
-      <span style="display:flex;gap:18px">
-        <span>Income: <strong class="amt-g" id="inc-total">₹0</strong></span>
-        <span>Expense: <strong class="amt-r" id="exp-total">₹0</strong></span>
-      </span>
+      <span>Income: <strong class="amt-g" id="inc-total">₹0</strong></span>
+      <span>Expense: <strong class="amt-r" id="exp-total">₹0</strong></span>
       <span>Savings: <strong id="savings-total" class="amt-g">₹0</strong></span>
     </div>
   </div>
