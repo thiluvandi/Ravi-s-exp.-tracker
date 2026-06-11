@@ -170,6 +170,10 @@
         <label>Amount (₹)</label>
         <input type="number" id="entry-amt" placeholder="0" min="0" step="1">
       </div>
+      <div class="fg" style="flex:1;min-width:180px">
+        <label>Remarks (optional)</label>
+        <input type="text" id="entry-remarks" placeholder="Notes…">
+      </div>
       <button class="btn btn-g" id="entry-add-btn">+ Add</button>
     </div>
     <hr>
@@ -284,7 +288,7 @@
       eRes.data.forEach(function(row) {
         var k = eKey(row.type, row.month, row.year);
         if (!cache.entries[k]) cache.entries[k] = [];
-        cache.entries[k].push({ id: row.client_id || row.id, dbId: row.id, cat: row.cat, amount: Number(row.amount) });
+        cache.entries[k].push({ id: row.client_id || row.id, dbId: row.id, cat: row.cat, amount: Number(row.amount), remarks: row.remarks || '', recorded_at: row.recorded_at || row.created_at || null });
       });
 
       // Populate custom categories and deleted builtins
@@ -311,15 +315,16 @@
   }
 
   // ── Add entry ───────────────────────────────────────────────────
-  async function addEntryToDb(type, m, y, cat, amount) {
+  async function addEntryToDb(type, m, y, cat, amount, remarks) {
     var clientId = Date.now();
+    var recorded_at = new Date().toISOString();
     // Optimistic update
-    cacheEntries(type, m, y).push({ id: clientId, cat: cat, amount: amount });
+    cacheEntries(type, m, y).push({ id: clientId, cat: cat, amount: amount, remarks: remarks || '', recorded_at: recorded_at });
     renderAll();
     setStatus('ing');
     try {
       var res = await sb.from('entries').insert({
-        type: type, month: m, year: y, cat: cat, amount: amount, client_id: clientId
+        type: type, month: m, year: y, cat: cat, amount: amount, client_id: clientId, remarks: remarks || '', recorded_at: recorded_at
       }).select().single();
       if (res.error) throw res.error;
       // Update dbId in cache
@@ -526,12 +531,18 @@
         var isInc = e.type === 'income';
         var badgeCls = isInc ? 'badge-g' : 'badge-r';
         var typeLbl = isInc ? 'Income' : 'Expense';
+        var dt = e.recorded_at ? new Date(e.recorded_at) : null;
+        var dateLbl = dt ? dt.toLocaleDateString('en-IN', {day:'2-digit',month:'short',year:'numeric'}) : '';
+        var timeLbl = dt ? dt.toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit',hour12:true}) : '';
         var tr = document.createElement('tr');
         tr.dataset.id = e.id; tr.dataset.type = e.type;
         tr.innerHTML =
           '<td>' +
             '<span class="badge ' + badgeCls + '" style="margin-right:6px;font-size:0.72rem;padding:2px 7px">' + typeLbl + '</span>' +
             e.cat +
+            (dateLbl ? '<div style="font-size:0.75rem;color:var(--text2);margin-top:3px">' + dateLbl + '</div>' : '') +
+            (timeLbl ? '<div style="font-size:0.72rem;color:var(--text2)">' + timeLbl + '</div>' : '') +
+            (e.remarks ? '<div style="font-size:0.75rem;color:var(--text2);font-style:italic;margin-top:2px">' + e.remarks + '</div>' : '') +
           '</td>' +
           '<td class="amt-cell ' + (isInc ? 'amt-g' : 'amt-r') + '">' + fmt(e.amount) + '</td>' +
           '<td style="white-space:nowrap">' +
@@ -707,13 +718,15 @@
   });
 
   function doAddEntry() {
-    var type = entryTypeSel.value;
-    var cat  = entryCatSel.value;
-    var amt  = parseFloat(entryAmtEl.value);
+    var type    = entryTypeSel.value;
+    var cat     = entryCatSel.value;
+    var amt     = parseFloat(entryAmtEl.value);
+    var remarks = document.getElementById('entry-remarks').value.trim();
     if (!cat) { alert('Please select a category.'); return; }
     if (!amt || amt <= 0) { alert('Please enter a valid amount.'); return; }
     entryAmtEl.value = '';
-    addEntryToDb(type, getM(), getY(), cat, amt);
+    document.getElementById('entry-remarks').value = '';
+    addEntryToDb(type, getM(), getY(), cat, amt, remarks);
   }
   entryAddBtn.addEventListener('click', doAddEntry);
   entryAmtEl.addEventListener('keydown', function(e){ if (e.key === 'Enter') doAddEntry(); });
