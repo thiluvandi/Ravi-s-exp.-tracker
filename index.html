@@ -8,9 +8,9 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
   :root {
-    color-scheme: dark;
-    --bg: #0f1117; --surface: #1a1d27; --surface2: #22263a; --border: #2e3248;
-    --accent: #6c63ff; --accent2: #ff6b6b; --green: #43d98e; --text: #e8eaf0; --text2: #8b90a7; --radius: 12px;
+    color-scheme: light;
+    --bg: #f4f6fb; --surface: #ffffff; --surface2: #eef0f6; --border: #dde1ed;
+    --accent: #5b52e8; --accent2: #e8404a; --green: #1baa6a; --text: #1a1d2e; --text2: #6b708a; --radius: 12px;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
@@ -137,109 +137,72 @@
 </header>
 
 <nav>
-  <button class="nav-btn active" data-tab="income">Income</button>
-  <button class="nav-btn" data-tab="expense">Expenditure</button>
+  <button class="nav-btn active" data-tab="tracker">Tracker</button>
   <button class="nav-btn" data-tab="summary">Monthly Summary</button>
   <button class="nav-btn" data-tab="yearly">Yearly View</button>
 </nav>
 
-<!-- INCOME -->
-<div id="tab-income" class="tab active">
+<!-- TRACKER (unified entry form) -->
+<div id="tab-tracker" class="tab active">
   <div class="card">
-    <h2><span class="dot dot-g"></span>Add Income Entry</h2>
+    <h2>Add Entry</h2>
     <div class="form-row">
       <div class="fg">
-        <label>Category</label>
-        <select id="inc-cat">
-          <option value="Salary">Salary</option>
-          <option value="Rent (Inward)">Rent (Inward)</option>
-          <option value="Debt Collection">Debt Collection</option>
+        <label>Type</label>
+        <select id="entry-type">
+          <option value="income">Income</option>
+          <option value="expense">Expense</option>
         </select>
       </div>
       <div class="fg">
-        <label>Amount (₹)</label>
-        <input type="number" id="inc-amt" placeholder="0" min="0" step="1">
+        <label>Category</label>
+        <select id="entry-cat" style="min-width:220px"></select>
       </div>
-      <button class="btn btn-g" id="inc-add-btn">+ Add</button>
+      <div class="fg">
+        <label>Amount (₹)</label>
+        <input type="number" id="entry-amt" placeholder="0" min="0" step="1">
+      </div>
+      <button class="btn btn-g" id="entry-add-btn">+ Add</button>
     </div>
     <hr>
     <div class="sub-label">Add a new custom category</div>
     <div class="custom-row">
-      <div class="fg"><input type="text" id="inc-new-cat" placeholder="Category name…"></div>
-      <button class="btn btn-p btn-sm" id="inc-add-cat-btn">+ Create Category</button>
-      <button class="btn btn-sm" id="inc-manage-btn" style="background:var(--surface2);border:1px solid var(--border);color:var(--text2)">☰ Manage</button>
+      <div class="fg">
+        <select id="new-cat-type" style="min-width:120px">
+          <option value="income">Income</option>
+          <option value="expense">Expense</option>
+        </select>
+      </div>
+      <div class="fg"><input type="text" id="entry-new-cat" placeholder="Category name…"></div>
+      <button class="btn btn-p btn-sm" id="entry-add-cat-btn">+ Create Category</button>
+      <button class="btn btn-sm" id="entry-manage-btn" style="background:var(--surface2);border:1px solid var(--border);color:var(--text2)">☰ Manage</button>
     </div>
-    <div class="cat-list" id="inc-cat-list" style="display:none;margin-top:14px"></div>
-  </div>
-  <div class="entries-wrap">
-    <h3 id="inc-period-lbl">Entries</h3>
-    <div id="inc-empty" class="empty">No entries yet.</div>
-    <table id="inc-table" style="display:none">
-      <thead><tr><th>Category</th><th>Amount</th><th></th></tr></thead>
-      <tbody id="inc-tbody"></tbody>
-    </table>
-    <div class="total-bar">
-      <span>Total Income</span>
-      <strong class="amt-g" id="inc-total">₹0</strong>
+    <div id="inc-cat-list" style="display:none;margin-top:14px">
+      <div style="font-size:0.78rem;color:var(--green);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;font-weight:600">Income Categories</div>
+      <div class="cat-list" id="inc-cat-chips"></div>
+    </div>
+    <div id="exp-cat-list" style="display:none;margin-top:10px">
+      <div style="font-size:0.78rem;color:var(--accent2);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;font-weight:600">Expense Categories</div>
+      <div class="cat-list" id="exp-cat-chips"></div>
     </div>
   </div>
-</div>
 
-<!-- EXPENSE -->
-<div id="tab-expense" class="tab">
-  <div class="card">
-    <h2><span class="dot dot-r"></span>Add Expense Entry</h2>
-    <div class="form-row">
-      <div class="fg">
-        <label>Category</label>
-        <select id="exp-cat">
-          <option value="IDFC CC">IDFC CC</option>
-          <option value="SBI CC">SBI CC</option>
-          <option value="HDFC CC">HDFC CC</option>
-          <option value="SBI EMI">SBI EMI</option>
-          <option value="HDFC EMI">HDFC EMI</option>
-          <option value="School Fee">School Fee</option>
-          <option value="Kavya">Kavya</option>
-          <option value="Rent Payable">Rent Payable</option>
-          <option value="Maintenance">Maintenance</option>
-          <option value="Maid">Maid</option>
-          <option value="Watchman">Watchman</option>
-          <option value="Fuel">Fuel</option>
-          <option value="Internet - Wifi">Internet - Wifi</option>
-          <option value="Mobile Bill">Mobile Bill</option>
-          <option value="Electricity">Electricity</option>
-          <option value="Gas">Gas</option>
-          <option value="Groceries">Groceries</option>
-        </select>
-      </div>
-      <div class="fg">
-        <label>Amount (₹)</label>
-        <input type="number" id="exp-amt" placeholder="0" min="0" step="1">
-      </div>
-      <button class="btn btn-r" id="exp-add-btn">+ Add</button>
-    </div>
-    <hr>
-    <div class="sub-label">Add a new custom category</div>
-    <div class="custom-row">
-      <div class="fg"><input type="text" id="exp-new-cat" placeholder="Category name…"></div>
-      <button class="btn btn-p btn-sm" id="exp-add-cat-btn">+ Create Category</button>
-      <button class="btn btn-sm" id="exp-manage-btn" style="background:var(--surface2);border:1px solid var(--border);color:var(--text2)">☰ Manage</button>
-    </div>
-    <div class="cat-list" id="exp-cat-list" style="display:none;margin-top:14px"></div>
-  </div>
   <div class="entries-wrap">
-    <h3 id="exp-period-lbl">Entries</h3>
-    <div id="exp-empty" class="empty">No entries yet.</div>
-    <table id="exp-table" style="display:none">
-      <thead><tr><th>Category</th><th>Amount</th><th></th></tr></thead>
-      <tbody id="exp-tbody"></tbody>
+    <h3 id="all-period-lbl">Entries</h3>
+    <div id="all-empty" class="empty">No entries yet.</div>
+    <table id="all-table" style="display:none">
+      <thead><tr><th>Type / Category</th><th>Amount</th><th></th></tr></thead>
+      <tbody id="all-tbody"></tbody>
     </table>
-    <div class="total-bar">
-      <span>Total Expenditure</span>
-      <strong class="amt-r" id="exp-total">₹0</strong>
+    <div class="total-bar" style="flex-wrap:wrap;gap:12px">
+      <span style="display:flex;gap:18px">
+        <span>Income: <strong class="amt-g" id="inc-total">₹0</strong></span>
+        <span>Expense: <strong class="amt-r" id="exp-total">₹0</strong></span>
+      </span>
+      <span>Savings: <strong id="savings-total" class="amt-g">₹0</strong></span>
     </div>
   </div>
-</div>
+</div> <!-- /tab-tracker -->
 
 <!-- SUMMARY -->
 <div id="tab-summary" class="tab">
@@ -323,8 +286,8 @@
       });
 
       // Restore custom cats into selects
-      restoreCustomCats('income',  'inc-cat');
-      restoreCustomCats('expense', 'exp-cat');
+      restoreCustomCats('income');
+      restoreCustomCats('expense');
       renderCatList('income');
       renderCatList('expense');
 
@@ -333,8 +296,7 @@
       console.error('Supabase load error', e);
       setStatus('err');
     }
-    render('income');
-    render('expense');
+    renderAll();
   }
 
   // ── Add entry ───────────────────────────────────────────────────
@@ -342,7 +304,7 @@
     var clientId = Date.now();
     // Optimistic update
     cacheEntries(type, m, y).push({ id: clientId, cat: cat, amount: amount });
-    render(type);
+    renderAll();
     setStatus('ing');
     try {
       var res = await sb.from('entries').insert({
@@ -358,6 +320,7 @@
       console.error('Insert error', e);
       setStatus('err');
     }
+    renderAll();
   }
 
   // ── Delete entry ────────────────────────────────────────────────
@@ -366,7 +329,7 @@
     var entry = arr.find(function(e) { return e.id === clientId; });
     // Optimistic remove
     cache.entries[eKey(type, m, y)] = arr.filter(function(e) { return e.id !== clientId; });
-    render(type);
+    renderAll();
     if (!entry) return;
     setStatus('ing');
     try {
@@ -403,9 +366,8 @@
   async function deleteCatFromDb(type, name) {
     var idx = cache.custom[type].indexOf(name);
     if (idx !== -1) cache.custom[type].splice(idx, 1);
-    var selId = type === 'income' ? 'inc-cat' : 'exp-cat';
-    var sel = document.getElementById(selId);
-    Array.from(sel.options).forEach(function(o){ if (o.value === name) o.remove(); });
+    // Remove from category dropdown if currently shown
+    populateCatSelect(document.getElementById('entry-type').value);
     renderCatList(type);
     setStatus('ing');
     try {
@@ -419,11 +381,11 @@
   }
 
   function renderCatList(type) {
-    var listEl = document.getElementById((type === 'income' ? 'inc' : 'exp') + '-cat-list');
+    var chipsEl = document.getElementById((type === 'income' ? 'inc' : 'exp') + '-cat-chips');
     var builtins = type === 'income' ? BUILTIN_INC : BUILTIN_EXP;
     var all = builtins.map(function(n){ return {name:n,custom:false}; })
       .concat(cache.custom[type].map(function(n){ return {name:n,custom:true}; }));
-    listEl.innerHTML = '';
+    chipsEl.innerHTML = '';
     all.forEach(function(item) {
       var chip = document.createElement('div');
       chip.className = 'cat-chip' + (item.custom ? '' : ' builtin');
@@ -435,16 +397,28 @@
       btn.addEventListener('click', function() {
         if (!confirm('Delete category "' + item.name + '"? This won\'t remove existing entries.')) return;
         deleteCatFromDb(type, item.name);
-        if (!item.custom) {
-          var selId = type === 'income' ? 'inc-cat' : 'exp-cat';
-          var sel = document.getElementById(selId);
-          Array.from(sel.options).forEach(function(o){ if (o.value === item.name) o.remove(); });
-          chip.remove();
-        }
+        chip.remove();
       });
       chip.appendChild(btn);
-      listEl.appendChild(chip);
+      chipsEl.appendChild(chip);
     });
+  }
+
+  function populateCatSelect(type) {
+    var sel = document.getElementById('entry-cat');
+    var prev = sel.value;
+    sel.innerHTML = '';
+    var builtins = type === 'income' ? BUILTIN_INC : BUILTIN_EXP;
+    var all = builtins.concat(cache.custom[type] || []);
+    all.forEach(function(name) {
+      var opt = document.createElement('option');
+      opt.value = name; opt.text = name;
+      sel.appendChild(opt);
+    });
+    if (all.indexOf(prev) !== -1) sel.value = prev;
+    // Update add button color
+    var btn = document.getElementById('entry-add-btn');
+    btn.className = 'btn ' + (type === 'income' ? 'btn-g' : 'btn-r');
   }
 
   // ── Edit entry amount ───────────────────────────────────────────
@@ -453,7 +427,7 @@
     var entry = arr.find(function(e){ return e.id === clientId; });
     if (!entry) return;
     entry.amount = newAmount;
-    render(type);
+    renderAll();
     setStatus('ing');
     try {
       if (entry.dbId) {
@@ -495,8 +469,8 @@
   function periodStr() { return MONTHS[getM()] + ' ' + getY(); }
   function fmt(n) { return '₹' + Number(n||0).toLocaleString('en-IN', {maximumFractionDigits:0}); }
 
-  selMonth.addEventListener('change', function() { render('income'); render('expense'); });
-  selYear.addEventListener('change',  function() { render('income'); render('expense'); });
+  selMonth.addEventListener('change', function() { renderAll(); });
+  selYear.addEventListener('change',  function() { renderAll(); });
 
   document.querySelectorAll('.nav-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
@@ -509,45 +483,51 @@
     });
   });
 
-  function render(type) {
-    var pfx   = type === 'income' ? 'inc' : 'exp';
+  function renderAll() {
     var m = getM(), yr = getY();
-    var entries   = cacheEntries(type, m, yr);
-    var lbl       = document.getElementById(pfx + '-period-lbl');
-    var emptyEl   = document.getElementById(pfx + '-empty');
-    var tbl       = document.getElementById(pfx + '-table');
-    var tbody     = document.getElementById(pfx + '-tbody');
-    var totalEl   = document.getElementById(pfx + '-total');
-    var badgeCls  = type === 'income' ? 'badge-g' : 'badge-r';
+    var iEntries = cacheEntries('income', m, yr);
+    var eEntries = cacheEntries('expense', m, yr);
+    var allEntries = iEntries.map(function(e){ return Object.assign({}, e, {type:'income'}); })
+      .concat(eEntries.map(function(e){ return Object.assign({}, e, {type:'expense'}); }));
 
-    lbl.textContent = 'Entries for ' + periodStr();
+    document.getElementById('all-period-lbl').textContent = 'Entries for ' + periodStr();
+    var tbody = document.getElementById('all-tbody');
+    var emptyEl = document.getElementById('all-empty');
+    var tbl = document.getElementById('all-table');
     tbody.innerHTML = '';
 
-    if (entries.length === 0) {
+    if (allEntries.length === 0) {
       emptyEl.style.display = 'block';
       tbl.style.display = 'none';
     } else {
       emptyEl.style.display = 'none';
       tbl.style.display = '';
-      entries.forEach(function(e) {
+      allEntries.forEach(function(e) {
+        var isInc = e.type === 'income';
+        var badgeCls = isInc ? 'badge-g' : 'badge-r';
+        var typeLbl = isInc ? 'Income' : 'Expense';
         var tr = document.createElement('tr');
-        tr.dataset.id = e.id;
+        tr.dataset.id = e.id; tr.dataset.type = e.type;
         tr.innerHTML =
-          '<td><span class="badge ' + badgeCls + '">' + e.cat + '</span></td>' +
-          '<td class="amt-cell">' + fmt(e.amount) + '</td>' +
+          '<td>' +
+            '<span class="badge ' + badgeCls + '" style="margin-right:6px;font-size:0.72rem;padding:2px 7px">' + typeLbl + '</span>' +
+            e.cat +
+          '</td>' +
+          '<td class="amt-cell ' + (isInc ? 'amt-g' : 'amt-r') + '">' + fmt(e.amount) + '</td>' +
           '<td style="white-space:nowrap">' +
-            '<button class="edit-btn" data-id="' + e.id + '" title="Edit amount">✎</button>' +
-            '<button class="del" data-id="' + e.id + '" title="Delete">✕</button>' +
+            '<button class="edit-btn" data-id="' + e.id + '" data-type="' + e.type + '" title="Edit amount">✎</button>' +
+            '<button class="del" data-id="' + e.id + '" data-type="' + e.type + '" title="Delete">✕</button>' +
           '</td>';
         tbody.appendChild(tr);
       });
       tbody.querySelectorAll('.del').forEach(function(btn) {
         btn.addEventListener('click', function() {
-          deleteEntryFromDb(type, m, yr, parseInt(btn.dataset.id, 10));
+          deleteEntryFromDb(btn.dataset.type, m, yr, parseInt(btn.dataset.id, 10));
         });
       });
       tbody.querySelectorAll('.edit-btn').forEach(function(btn) {
         btn.addEventListener('click', function() {
+          var type = btn.dataset.type;
           var clientId = parseInt(btn.dataset.id, 10);
           var tr = btn.closest('tr');
           var amtCell = tr.querySelector('.amt-cell');
@@ -560,67 +540,30 @@
           inp.focus(); inp.select();
           function commit() {
             var val = parseFloat(inp.value);
-            if (!val || val <= 0) { render(type); return; }
+            if (!val || val <= 0) { renderAll(); return; }
             updateEntryAmount(type, m, yr, clientId, val);
           }
           inp.addEventListener('blur', commit);
           inp.addEventListener('keydown', function(ev) {
             if (ev.key === 'Enter') { inp.blur(); }
-            if (ev.key === 'Escape') { render(type); }
+            if (ev.key === 'Escape') { renderAll(); }
           });
         });
       });
     }
-    totalEl.textContent = fmt(entries.reduce(function(s,e){ return s+e.amount; }, 0));
+
+    var iTotal = iEntries.reduce(function(s,e){ return s+e.amount; }, 0);
+    var eTotal = eEntries.reduce(function(s,e){ return s+e.amount; }, 0);
+    var sav = iTotal - eTotal;
+    document.getElementById('inc-total').textContent = fmt(iTotal);
+    document.getElementById('exp-total').textContent = fmt(eTotal);
+    var savEl = document.getElementById('savings-total');
+    savEl.textContent = fmt(sav);
+    savEl.className = sav >= 0 ? 'amt-g' : 'amt-r';
   }
 
-  function setupAddEntry(type, catSelId, amtId, btnId) {
-    var catSel = document.getElementById(catSelId);
-    var amtEl  = document.getElementById(amtId);
-    var btn    = document.getElementById(btnId);
-
-    function doAdd() {
-      var cat = catSel.value;
-      var amt = parseFloat(amtEl.value);
-      if (!cat) { alert('Please select a category.'); return; }
-      if (!amt || amt <= 0) { alert('Please enter a valid amount.'); return; }
-      amtEl.value = '';
-      addEntryToDb(type, getM(), getY(), cat, amt);
-    }
-    btn.addEventListener('click', doAdd);
-    amtEl.addEventListener('keydown', function(e){ if (e.key === 'Enter') doAdd(); });
-  }
-
-  function setupAddCat(type, catSelId, inputId, btnId) {
-    var catSel = document.getElementById(catSelId);
-    var inp    = document.getElementById(inputId);
-    var btn    = document.getElementById(btnId);
-
-    function doAddCat() {
-      var name = inp.value.trim();
-      if (!name) { alert('Please enter a category name.'); return; }
-      var existing = Array.from(catSel.options).map(function(o){ return o.value.toLowerCase(); });
-      if (existing.indexOf(name.toLowerCase()) !== -1) { alert('Category already exists.'); return; }
-      var opt = document.createElement('option');
-      opt.value = name; opt.text = name; opt.dataset.custom = '1';
-      catSel.appendChild(opt);
-      catSel.value = name;
-      inp.value = '';
-      addCatToDb(type, name);
-      renderCatList(type);
-    }
-    btn.addEventListener('click', doAddCat);
-    inp.addEventListener('keydown', function(e){ if (e.key === 'Enter') doAddCat(); });
-  }
-
-  function restoreCustomCats(type, selId) {
-    var sel = document.getElementById(selId);
-    sel.querySelectorAll('option[data-custom]').forEach(function(o){ o.remove(); });
-    cache.custom[type].forEach(function(name) {
-      var opt = document.createElement('option');
-      opt.value = name; opt.text = name; opt.dataset.custom = '1';
-      sel.appendChild(opt);
-    });
+  function restoreCustomCats(type) {
+    // categories are rebuilt fresh via populateCatSelect; nothing else to restore
   }
 
   // ── Charts ──────────────────────────────────────────────────────
@@ -637,7 +580,7 @@
     return {
       responsive:true, maintainAspectRatio:false,
       plugins:{
-        legend:{position:'right',labels:{color:'#8b90a7',boxWidth:12,font:{size:11}}},
+        legend:{position:'right',labels:{color:'#6b708a',boxWidth:12,font:{size:11}}},
         tooltip:{callbacks:{label:function(ctx){
           var tot=ctx.dataset.data.reduce(function(a,b){return a+b;},0);
           return ' '+ctx.label+': '+fmt(ctx.raw)+' ('+((ctx.raw/tot)*100).toFixed(1)+'%)';
@@ -646,10 +589,10 @@
     };
   }
   function barOpts() {
-    var g={grid:{color:'#2e3248'},ticks:{color:'#8b90a7'},border:{color:'#2e3248'}};
+    var g={grid:{color:'#dde1ed'},ticks:{color:'#6b708a'},border:{color:'#dde1ed'}};
     return {
       responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{labels:{color:'#8b90a7',font:{size:11}}}},
+      plugins:{legend:{labels:{color:'#6b708a',font:{size:11}}}},
       scales:{x:g,y:Object.assign({},g,{ticks:Object.assign({},g.ticks,{callback:function(v){return '₹'+v.toLocaleString('en-IN');}})})}
     };
   }
@@ -729,20 +672,62 @@
     charts.yb=new Chart(document.getElementById('c-yr-bar'),{type:'bar',data:{labels:SHORT,datasets:[{label:'Income',data:iT,backgroundColor:'#43d98e99',borderColor:'#43d98e',borderWidth:2,borderRadius:4},{label:'Expenditure',data:eT,backgroundColor:'#ff6b6b99',borderColor:'#ff6b6b',borderWidth:2,borderRadius:4},{label:'Savings',data:sav.map(function(v){return Math.max(0,v);}),backgroundColor:'#6c63ff99',borderColor:'#6c63ff',borderWidth:2,borderRadius:4}]},options:barOpts()});
   }
 
-  setupAddEntry('income',  'inc-cat', 'inc-amt', 'inc-add-btn');
-  setupAddEntry('expense', 'exp-cat', 'exp-amt', 'exp-add-btn');
-  setupAddCat('income',  'inc-cat', 'inc-new-cat', 'inc-add-cat-btn');
-  setupAddCat('expense', 'exp-cat', 'exp-new-cat', 'exp-add-cat-btn');
+  // Unified entry form
+  var entryTypeSel = document.getElementById('entry-type');
+  var entryCatSel  = document.getElementById('entry-cat');
+  var entryAmtEl   = document.getElementById('entry-amt');
+  var entryAddBtn  = document.getElementById('entry-add-btn');
 
-  ['inc', 'exp'].forEach(function(pfx) {
-    var btn = document.getElementById(pfx + '-manage-btn');
-    var list = document.getElementById(pfx + '-cat-list');
-    btn.addEventListener('click', function() {
-      var open = list.style.display !== 'none';
-      list.style.display = open ? 'none' : 'flex';
-      btn.style.color = open ? 'var(--text2)' : 'var(--accent)';
-      btn.style.borderColor = open ? 'var(--border)' : 'var(--accent)';
-    });
+  populateCatSelect('income'); // initial population
+
+  entryTypeSel.addEventListener('change', function() {
+    populateCatSelect(entryTypeSel.value);
+  });
+
+  function doAddEntry() {
+    var type = entryTypeSel.value;
+    var cat  = entryCatSel.value;
+    var amt  = parseFloat(entryAmtEl.value);
+    if (!cat) { alert('Please select a category.'); return; }
+    if (!amt || amt <= 0) { alert('Please enter a valid amount.'); return; }
+    entryAmtEl.value = '';
+    addEntryToDb(type, getM(), getY(), cat, amt);
+  }
+  entryAddBtn.addEventListener('click', doAddEntry);
+  entryAmtEl.addEventListener('keydown', function(e){ if (e.key === 'Enter') doAddEntry(); });
+
+  // Unified category creation
+  var newCatTypeEl = document.getElementById('new-cat-type');
+  var newCatInp    = document.getElementById('entry-new-cat');
+  var newCatBtn    = document.getElementById('entry-add-cat-btn');
+
+  function doAddCat() {
+    var type = newCatTypeEl.value;
+    var name = newCatInp.value.trim();
+    if (!name) { alert('Please enter a category name.'); return; }
+    var builtins = type === 'income' ? BUILTIN_INC : BUILTIN_EXP;
+    var all = builtins.concat(cache.custom[type] || []);
+    if (all.map(function(n){ return n.toLowerCase(); }).indexOf(name.toLowerCase()) !== -1) {
+      alert('Category already exists.'); return;
+    }
+    newCatInp.value = '';
+    addCatToDb(type, name);
+    renderCatList(type);
+    // If current type matches, update the dropdown
+    if (entryTypeSel.value === type) populateCatSelect(type);
+  }
+  newCatBtn.addEventListener('click', doAddCat);
+  newCatInp.addEventListener('keydown', function(e){ if (e.key === 'Enter') doAddCat(); });
+
+  // Manage categories toggle
+  document.getElementById('entry-manage-btn').addEventListener('click', function() {
+    var incList = document.getElementById('inc-cat-list');
+    var expList = document.getElementById('exp-cat-list');
+    var open = incList.style.display !== 'none';
+    incList.style.display = open ? 'none' : 'block';
+    expList.style.display = open ? 'none' : 'block';
+    this.style.color = open ? 'var(--text2)' : 'var(--accent)';
+    this.style.borderColor = open ? 'var(--border)' : 'var(--accent)';
   });
 
   loadAll();
