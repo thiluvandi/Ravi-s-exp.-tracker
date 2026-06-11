@@ -76,6 +76,14 @@
   .badge-r { background: #ff6b6b22; color: var(--accent2); }
   .del { background: none; border: none; color: var(--text2); cursor: pointer; font-size: 1rem; padding: 3px 6px; border-radius: 4px; }
   .del:hover { color: var(--accent2); }
+  .edit-btn { background: none; border: none; color: var(--text2); cursor: pointer; font-size: 0.85rem; padding: 3px 6px; border-radius: 4px; }
+  .edit-btn:hover { color: var(--accent); }
+  .edit-inline { background: var(--surface2); border: 1px solid var(--accent); color: var(--text); padding: 4px 8px; border-radius: 6px; font-size: 0.88rem; width: 100px; }
+  .cat-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .cat-chip { display: flex; align-items: center; gap: 6px; background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; padding: 5px 12px; font-size: 0.82rem; }
+  .cat-chip.builtin { opacity: 0.7; }
+  .cat-del { background: none; border: none; color: var(--text2); cursor: pointer; font-size: 0.8rem; padding: 0 2px; line-height: 1; }
+  .cat-del:hover { color: var(--accent2); }
   .empty { text-align: center; color: var(--text2); font-size: 0.88rem; padding: 20px 0; }
   .total-bar { display: flex; justify-content: space-between; align-items: center; padding-top: 14px; border-top: 1px solid var(--border); margin-top: 4px; }
   .total-bar span { font-size: 0.85rem; color: var(--text2); }
@@ -160,6 +168,9 @@
       <div class="fg"><input type="text" id="inc-new-cat" placeholder="Category name…"></div>
       <button class="btn btn-p btn-sm" id="inc-add-cat-btn">+ Create Category</button>
     </div>
+    <hr>
+    <div class="sub-label">Manage categories</div>
+    <div class="cat-list" id="inc-cat-list"></div>
   </div>
   <div class="entries-wrap">
     <h3 id="inc-period-lbl">Entries</h3>
@@ -214,6 +225,9 @@
       <div class="fg"><input type="text" id="exp-new-cat" placeholder="Category name…"></div>
       <button class="btn btn-p btn-sm" id="exp-add-cat-btn">+ Create Category</button>
     </div>
+    <hr>
+    <div class="sub-label">Manage categories</div>
+    <div class="cat-list" id="exp-cat-list"></div>
   </div>
   <div class="entries-wrap">
     <h3 id="exp-period-lbl">Entries</h3>
@@ -313,6 +327,8 @@
       // Restore custom cats into selects
       restoreCustomCats('income',  'inc-cat');
       restoreCustomCats('expense', 'exp-cat');
+      renderCatList('income');
+      renderCatList('expense');
 
       setStatus('ok');
     } catch(e) {
@@ -382,6 +398,77 @@
     }
   }
 
+  // ── Delete category ─────────────────────────────────────────────
+  var BUILTIN_INC = ['Salary','Rent (Inward)','Debt Collection'];
+  var BUILTIN_EXP = ['IDFC CC','SBI CC','HDFC CC','SBI EMI','HDFC EMI','School Fee','Kavya','Rent Payable','Maintenance','Maid','Watchman','Fuel','Internet - Wifi','Mobile Bill','Electricity','Gas','Groceries'];
+
+  async function deleteCatFromDb(type, name) {
+    var idx = cache.custom[type].indexOf(name);
+    if (idx !== -1) cache.custom[type].splice(idx, 1);
+    var selId = type === 'income' ? 'inc-cat' : 'exp-cat';
+    var sel = document.getElementById(selId);
+    Array.from(sel.options).forEach(function(o){ if (o.value === name) o.remove(); });
+    renderCatList(type);
+    setStatus('ing');
+    try {
+      var res = await sb.from('custom_categories').delete().eq('type', type).eq('name', name);
+      if (res.error) throw res.error;
+      setStatus('ok');
+    } catch(e) {
+      console.error('Cat delete error', e);
+      setStatus('err');
+    }
+  }
+
+  function renderCatList(type) {
+    var listEl = document.getElementById((type === 'income' ? 'inc' : 'exp') + '-cat-list');
+    var builtins = type === 'income' ? BUILTIN_INC : BUILTIN_EXP;
+    var all = builtins.map(function(n){ return {name:n,custom:false}; })
+      .concat(cache.custom[type].map(function(n){ return {name:n,custom:true}; }));
+    listEl.innerHTML = '';
+    all.forEach(function(item) {
+      var chip = document.createElement('div');
+      chip.className = 'cat-chip' + (item.custom ? '' : ' builtin');
+      chip.innerHTML = '<span>' + item.name + '</span>';
+      var btn = document.createElement('button');
+      btn.className = 'cat-del';
+      btn.title = 'Delete category';
+      btn.textContent = '✕';
+      btn.addEventListener('click', function() {
+        if (!confirm('Delete category "' + item.name + '"? This won\'t remove existing entries.')) return;
+        deleteCatFromDb(type, item.name);
+        if (!item.custom) {
+          var selId = type === 'income' ? 'inc-cat' : 'exp-cat';
+          var sel = document.getElementById(selId);
+          Array.from(sel.options).forEach(function(o){ if (o.value === item.name) o.remove(); });
+          chip.remove();
+        }
+      });
+      chip.appendChild(btn);
+      listEl.appendChild(chip);
+    });
+  }
+
+  // ── Edit entry amount ───────────────────────────────────────────
+  async function updateEntryAmount(type, m, y, clientId, newAmount) {
+    var arr = cacheEntries(type, m, y);
+    var entry = arr.find(function(e){ return e.id === clientId; });
+    if (!entry) return;
+    entry.amount = newAmount;
+    render(type);
+    setStatus('ing');
+    try {
+      if (entry.dbId) {
+        var res = await sb.from('entries').update({ amount: newAmount }).eq('id', entry.dbId);
+        if (res.error) throw res.error;
+      }
+      setStatus('ok');
+    } catch(e) {
+      console.error('Update error', e);
+      setStatus('err');
+    }
+  }
+
   // ── Render entries list ─────────────────────────────────────────
   var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   var SHORT   = MONTHS.map(function(m){ return m.slice(0,3); });
@@ -446,15 +533,43 @@
       tbl.style.display = '';
       entries.forEach(function(e) {
         var tr = document.createElement('tr');
+        tr.dataset.id = e.id;
         tr.innerHTML =
           '<td><span class="badge ' + badgeCls + '">' + e.cat + '</span></td>' +
-          '<td>' + fmt(e.amount) + '</td>' +
-          '<td><button class="del" data-id="' + e.id + '" title="Delete">✕</button></td>';
+          '<td class="amt-cell">' + fmt(e.amount) + '</td>' +
+          '<td style="white-space:nowrap">' +
+            '<button class="edit-btn" data-id="' + e.id + '" title="Edit amount">✎</button>' +
+            '<button class="del" data-id="' + e.id + '" title="Delete">✕</button>' +
+          '</td>';
         tbody.appendChild(tr);
       });
       tbody.querySelectorAll('.del').forEach(function(btn) {
         btn.addEventListener('click', function() {
           deleteEntryFromDb(type, m, yr, parseInt(btn.dataset.id, 10));
+        });
+      });
+      tbody.querySelectorAll('.edit-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          var clientId = parseInt(btn.dataset.id, 10);
+          var tr = btn.closest('tr');
+          var amtCell = tr.querySelector('.amt-cell');
+          var entry = cacheEntries(type, m, yr).find(function(e){ return e.id === clientId; });
+          if (!entry || tr.querySelector('.edit-inline')) return;
+          var inp = document.createElement('input');
+          inp.type = 'number'; inp.className = 'edit-inline'; inp.value = entry.amount; inp.min = '0';
+          amtCell.innerHTML = '';
+          amtCell.appendChild(inp);
+          inp.focus(); inp.select();
+          function commit() {
+            var val = parseFloat(inp.value);
+            if (!val || val <= 0) { render(type); return; }
+            updateEntryAmount(type, m, yr, clientId, val);
+          }
+          inp.addEventListener('blur', commit);
+          inp.addEventListener('keydown', function(ev) {
+            if (ev.key === 'Enter') { inp.blur(); }
+            if (ev.key === 'Escape') { render(type); }
+          });
         });
       });
     }
@@ -494,6 +609,7 @@
       catSel.value = name;
       inp.value = '';
       addCatToDb(type, name);
+      renderCatList(type);
     }
     btn.addEventListener('click', doAddCat);
     inp.addEventListener('keydown', function(e){ if (e.key === 'Enter') doAddCat(); });
