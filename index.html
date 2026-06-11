@@ -81,7 +81,6 @@
   .edit-inline { background: var(--surface2); border: 1px solid var(--accent); color: var(--text); padding: 4px 8px; border-radius: 6px; font-size: 0.88rem; width: 100px; }
   .cat-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
   .cat-chip { display: flex; align-items: center; gap: 6px; background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; padding: 5px 12px; font-size: 0.82rem; }
-  .cat-chip.builtin { opacity: 0.7; }
   .cat-del { background: none; border: none; color: var(--text2); cursor: pointer; font-size: 0.8rem; padding: 0 2px; line-height: 1; }
   .cat-del:hover { color: var(--accent2); }
   .empty { text-align: center; color: var(--text2); font-size: 0.88rem; padding: 20px 0; }
@@ -253,7 +252,8 @@
   // ── In-memory cache ─────────────────────────────────────────────
   // entries: keyed by type+'_'+year+'_'+month → [{id,cat,amount,client_id}]
   // custom:  keyed by type → [name, …]
-  var cache = { entries: {}, custom: { income: [], expense: [] } };
+  // deleted: keyed by type → [name, …]  (tracks deleted builtin cats)
+  var cache = { entries: {}, custom: { income: [], expense: [] }, deleted: { income: [], expense: [] } };
 
   function eKey(type, m, y) { return type + '_' + y + '_' + m; }
 
@@ -280,14 +280,18 @@
         cache.entries[k].push({ id: row.client_id || row.id, dbId: row.id, cat: row.cat, amount: Number(row.amount) });
       });
 
-      // Populate custom categories
+      // Populate custom categories and deleted builtins
       cRes.data.forEach(function(row) {
-        if (cache.custom[row.type]) cache.custom[row.type].push(row.name);
+        if (row.name.indexOf('__del__') === 0) {
+          var realName = row.name.slice(7);
+          if (cache.deleted[row.type]) cache.deleted[row.type].push(realName);
+        } else if (cache.custom[row.type]) {
+          cache.custom[row.type].push(row.name);
+        }
       });
 
-      // Restore custom cats into selects
-      restoreCustomCats('income');
-      restoreCustomCats('expense');
+      // Refresh category dropdown and manage lists
+      populateCatSelect(document.getElementById('entry-type').value);
       renderCatList('income');
       renderCatList('expense');
 
@@ -364,14 +368,20 @@
   var BUILTIN_EXP = ['IDFC CC','SBI CC','HDFC CC','SBI EMI','HDFC EMI','School Fee','Kavya','Rent Payable','Maintenance','Maid','Watchman','Fuel','Internet - Wifi','Mobile Bill','Electricity','Gas','Groceries'];
 
   async function deleteCatFromDb(type, name) {
-    var idx = cache.custom[type].indexOf(name);
-    if (idx !== -1) cache.custom[type].splice(idx, 1);
-    // Remove from category dropdown if currently shown
+    var isBuiltin = (type === 'income' ? BUILTIN_INC : BUILTIN_EXP).indexOf(name) !== -1;
+    if (isBuiltin) {
+      cache.deleted[type].push(name);
+    } else {
+      var idx = cache.custom[type].indexOf(name);
+      if (idx !== -1) cache.custom[type].splice(idx, 1);
+    }
     populateCatSelect(document.getElementById('entry-type').value);
     renderCatList(type);
     setStatus('ing');
     try {
-      var res = await sb.from('custom_categories').delete().eq('type', type).eq('name', name);
+      var res = isBuiltin
+        ? await sb.from('custom_categories').insert({ type: type, name: '__del__' + name })
+        : await sb.from('custom_categories').delete().eq('type', type).eq('name', name);
       if (res.error) throw res.error;
       setStatus('ok');
     } catch(e) {
@@ -383,12 +393,14 @@
   function renderCatList(type) {
     var chipsEl = document.getElementById((type === 'income' ? 'inc' : 'exp') + '-cat-chips');
     var builtins = type === 'income' ? BUILTIN_INC : BUILTIN_EXP;
-    var all = builtins.map(function(n){ return {name:n,custom:false}; })
-      .concat(cache.custom[type].map(function(n){ return {name:n,custom:true}; }));
+    var deleted = cache.deleted[type] || [];
+    var all = builtins.filter(function(n){ return deleted.indexOf(n) === -1; })
+      .map(function(n){ return {name:n}; })
+      .concat(cache.custom[type].map(function(n){ return {name:n}; }));
     chipsEl.innerHTML = '';
     all.forEach(function(item) {
       var chip = document.createElement('div');
-      chip.className = 'cat-chip' + (item.custom ? '' : ' builtin');
+      chip.className = 'cat-chip';
       chip.innerHTML = '<span>' + item.name + '</span>';
       var btn = document.createElement('button');
       btn.className = 'cat-del';
@@ -409,7 +421,8 @@
     var prev = sel.value;
     sel.innerHTML = '';
     var builtins = type === 'income' ? BUILTIN_INC : BUILTIN_EXP;
-    var all = builtins.concat(cache.custom[type] || []);
+    var deleted = cache.deleted[type] || [];
+    var all = builtins.filter(function(n){ return deleted.indexOf(n) === -1; }).concat(cache.custom[type] || []);
     all.forEach(function(name) {
       var opt = document.createElement('option');
       opt.value = name; opt.text = name;
@@ -612,8 +625,10 @@
     var eArr=Object.entries(eMap).filter(function(e){return e[1]>0;});
     killChart('ip'); killChart('ep'); killChart('ob');
 
-    if(iArr.length) charts.ip=new Chart(document.getElementById('c-inc-pie'),{type:'doughnut',data:{labels:iArr.map(function(e){return e[0];}),datasets:[{data:iArr.map(function(e){return e[1];}),backgroundColor:IC,borderWidth:2,borderColor:'#1a1d27'}]},options:pieOpts()});
-    if(eArr.length) charts.ep=new Chart(document.getElementById('c-exp-pie'),{type:'doughnut',data:{labels:eArr.map(function(e){return e[0];}),datasets:[{data:eArr.map(function(e){return e[1];}),backgroundColor:EC,borderWidth:2,borderColor:'#1a1d27'}]},options:pieOpts()});
+    var ICS=IC.map(function(c){return c+'99';});
+    var ECS=EC.map(function(c){return c+'99';});
+    if(iArr.length) charts.ip=new Chart(document.getElementById('c-inc-pie'),{type:'doughnut',data:{labels:iArr.map(function(e){return e[0];}),datasets:[{data:iArr.map(function(e){return e[1];}),backgroundColor:ICS,borderColor:IC,borderWidth:2}]},options:pieOpts()});
+    if(eArr.length) charts.ep=new Chart(document.getElementById('c-exp-pie'),{type:'doughnut',data:{labels:eArr.map(function(e){return e[0];}),datasets:[{data:eArr.map(function(e){return e[1];}),backgroundColor:ECS,borderColor:EC,borderWidth:2}]},options:pieOpts()});
 
     charts.ob=new Chart(document.getElementById('c-overview'),{type:'bar',data:{labels:[MONTHS[m]+' '+yr],datasets:[{label:'Income',data:[iT],backgroundColor:'#43d98e',borderRadius:6},{label:'Expenditure',data:[eT],backgroundColor:'#ff6b6b',borderRadius:6},{label:'Savings',data:[Math.max(0,sav)],backgroundColor:'#6c63ff',borderRadius:6}]},options:barOpts()});
 
@@ -706,7 +721,8 @@
     var name = newCatInp.value.trim();
     if (!name) { alert('Please enter a category name.'); return; }
     var builtins = type === 'income' ? BUILTIN_INC : BUILTIN_EXP;
-    var all = builtins.concat(cache.custom[type] || []);
+    var deleted = cache.deleted[type] || [];
+    var all = builtins.filter(function(n){ return deleted.indexOf(n) === -1; }).concat(cache.custom[type] || []);
     if (all.map(function(n){ return n.toLowerCase(); }).indexOf(name.toLowerCase()) !== -1) {
       alert('Category already exists.'); return;
     }
