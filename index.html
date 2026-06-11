@@ -466,6 +466,27 @@
     }
   }
 
+  async function updateEntryFull(type, m, y, clientId, newAmount, recorded_at, remarks) {
+    var arr = cacheEntries(type, m, y);
+    var entry = arr.find(function(e){ return e.id === clientId; });
+    if (!entry) return;
+    entry.amount = newAmount;
+    entry.recorded_at = recorded_at;
+    entry.remarks = remarks;
+    renderAll();
+    setStatus('ing');
+    try {
+      if (entry.dbId) {
+        var res = await sb.from('entries').update({ amount: newAmount, recorded_at: recorded_at, remarks: remarks }).eq('id', entry.dbId);
+        if (res.error) throw res.error;
+      }
+      setStatus('ok');
+    } catch(e) {
+      console.error('Update error', e);
+      setStatus('err');
+    }
+  }
+
   // ── Render entries list ─────────────────────────────────────────
   var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   var SHORT   = MONTHS.map(function(m){ return m.slice(0,3); });
@@ -508,6 +529,8 @@
     });
   });
 
+  var editingId = null, editingType = null;
+
   function renderAll() {
     var m = getM(), yr = getY();
     var iEntries = cacheEntries('income', m, yr);
@@ -536,20 +559,52 @@
         var timeLbl = dt ? dt.toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit',hour12:true}) : '';
         var tr = document.createElement('tr');
         tr.dataset.id = e.id; tr.dataset.type = e.type;
-        tr.innerHTML =
-          '<td>' +
-            '<span class="badge ' + badgeCls + '" style="margin-right:6px;font-size:0.72rem;padding:2px 7px">' + typeLbl + '</span>' +
-            e.cat +
-            (dateLbl ? '<div style="font-size:0.75rem;color:var(--text2);margin-top:3px">' + dateLbl + '</div>' : '') +
-            (timeLbl ? '<div style="font-size:0.72rem;color:var(--text2)">' + timeLbl + '</div>' : '') +
-            (e.remarks ? '<div style="font-size:0.75rem;color:var(--text2);font-style:italic;margin-top:2px">' + e.remarks + '</div>' : '') +
-          '</td>' +
-          '<td class="amt-cell ' + (isInc ? 'amt-g' : 'amt-r') + '">' + fmt(e.amount) + '</td>' +
-          '<td style="white-space:nowrap">' +
-            '<button class="edit-btn" data-id="' + e.id + '" data-type="' + e.type + '" title="Edit amount">✎</button>' +
-            '<button class="del" data-id="' + e.id + '" data-type="' + e.type + '" title="Delete">✕</button>' +
-          '</td>';
-        tbody.appendChild(tr);
+
+        if (editingId === e.id && editingType === e.type) {
+          var edt = dt || new Date();
+          var dateVal = edt.toISOString().slice(0,10);
+          var timeVal = edt.toTimeString().slice(0,5);
+          tr.innerHTML =
+            '<td colspan="3" style="padding:12px 0">' +
+              '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end">' +
+                '<div class="fg"><label>AMOUNT (₹)</label><input class="edit-inline ep-amt" type="number" value="' + e.amount + '" min="0" style="width:110px"></div>' +
+                '<div class="fg"><label>DATE</label><input class="edit-inline ep-date" type="date" value="' + dateVal + '" style="width:140px"></div>' +
+                '<div class="fg"><label>TIME</label><input class="edit-inline ep-time" type="time" value="' + timeVal + '" style="width:110px"></div>' +
+                '<div class="fg" style="flex:1;min-width:150px"><label>REMARKS</label><input class="edit-inline ep-remarks" type="text" value="' + (e.remarks||'').replace(/"/g,'&quot;') + '" placeholder="Notes…" style="width:100%"></div>' +
+                '<button class="btn btn-p btn-sm ep-save">Save</button>' +
+                '<button class="btn btn-sm ep-cancel" style="background:var(--surface2);border:1px solid var(--border)">Cancel</button>' +
+              '</div>' +
+            '</td>';
+          tbody.appendChild(tr);
+          tr.querySelector('.ep-save').addEventListener('click', function() {
+            var amt = parseFloat(tr.querySelector('.ep-amt').value);
+            if (!amt || amt <= 0) { alert('Enter a valid amount.'); return; }
+            var dateStr = tr.querySelector('.ep-date').value;
+            var timeStr = tr.querySelector('.ep-time').value;
+            var remarks = tr.querySelector('.ep-remarks').value.trim();
+            var recorded_at = (dateStr && timeStr) ? new Date(dateStr + 'T' + timeStr).toISOString() : e.recorded_at;
+            editingId = null; editingType = null;
+            updateEntryFull(e.type, m, yr, e.id, amt, recorded_at, remarks);
+          });
+          tr.querySelector('.ep-cancel').addEventListener('click', function() {
+            editingId = null; editingType = null; renderAll();
+          });
+        } else {
+          tr.innerHTML =
+            '<td>' +
+              '<span class="badge ' + badgeCls + '" style="margin-right:6px;font-size:0.72rem;padding:2px 7px">' + typeLbl + '</span>' +
+              e.cat +
+              (dateLbl ? '<div style="font-size:0.75rem;color:var(--text2);margin-top:3px">' + dateLbl + '</div>' : '') +
+              (timeLbl ? '<div style="font-size:0.72rem;color:var(--text2)">' + timeLbl + '</div>' : '') +
+              (e.remarks ? '<div style="font-size:0.75rem;color:var(--text2);font-style:italic;margin-top:2px">' + e.remarks + '</div>' : '') +
+            '</td>' +
+            '<td class="amt-cell ' + (isInc ? 'amt-g' : 'amt-r') + '">' + fmt(e.amount) + '</td>' +
+            '<td style="white-space:nowrap">' +
+              '<button class="edit-btn" data-id="' + e.id + '" data-type="' + e.type + '" title="Edit">✎</button>' +
+              '<button class="del" data-id="' + e.id + '" data-type="' + e.type + '" title="Delete">✕</button>' +
+            '</td>';
+          tbody.appendChild(tr);
+        }
       });
       tbody.querySelectorAll('.del').forEach(function(btn) {
         btn.addEventListener('click', function() {
@@ -558,27 +613,9 @@
       });
       tbody.querySelectorAll('.edit-btn').forEach(function(btn) {
         btn.addEventListener('click', function() {
-          var type = btn.dataset.type;
-          var clientId = parseInt(btn.dataset.id, 10);
-          var tr = btn.closest('tr');
-          var amtCell = tr.querySelector('.amt-cell');
-          var entry = cacheEntries(type, m, yr).find(function(e){ return e.id === clientId; });
-          if (!entry || tr.querySelector('.edit-inline')) return;
-          var inp = document.createElement('input');
-          inp.type = 'number'; inp.className = 'edit-inline'; inp.value = entry.amount; inp.min = '0';
-          amtCell.innerHTML = '';
-          amtCell.appendChild(inp);
-          inp.focus(); inp.select();
-          function commit() {
-            var val = parseFloat(inp.value);
-            if (!val || val <= 0) { renderAll(); return; }
-            updateEntryAmount(type, m, yr, clientId, val);
-          }
-          inp.addEventListener('blur', commit);
-          inp.addEventListener('keydown', function(ev) {
-            if (ev.key === 'Enter') { inp.blur(); }
-            if (ev.key === 'Escape') { renderAll(); }
-          });
+          editingId = parseInt(btn.dataset.id, 10);
+          editingType = btn.dataset.type;
+          renderAll();
         });
       });
     }
