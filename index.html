@@ -167,10 +167,9 @@
     <div class="custom-row">
       <div class="fg"><input type="text" id="inc-new-cat" placeholder="Category name…"></div>
       <button class="btn btn-p btn-sm" id="inc-add-cat-btn">+ Create Category</button>
+      <button class="btn btn-sm" id="inc-manage-btn" style="background:var(--surface2);border:1px solid var(--border);color:var(--text2)">☰ Manage</button>
     </div>
-    <hr>
-    <div class="sub-label">Manage categories</div>
-    <div class="cat-list" id="inc-cat-list"></div>
+    <div class="cat-list" id="inc-cat-list" style="display:none;margin-top:14px"></div>
   </div>
   <div class="entries-wrap">
     <h3 id="inc-period-lbl">Entries</h3>
@@ -224,10 +223,9 @@
     <div class="custom-row">
       <div class="fg"><input type="text" id="exp-new-cat" placeholder="Category name…"></div>
       <button class="btn btn-p btn-sm" id="exp-add-cat-btn">+ Create Category</button>
+      <button class="btn btn-sm" id="exp-manage-btn" style="background:var(--surface2);border:1px solid var(--border);color:var(--text2)">☰ Manage</button>
     </div>
-    <hr>
-    <div class="sub-label">Manage categories</div>
-    <div class="cat-list" id="exp-cat-list"></div>
+    <div class="cat-list" id="exp-cat-list" style="display:none;margin-top:14px"></div>
   </div>
   <div class="entries-wrap">
     <h3 id="exp-period-lbl">Entries</h3>
@@ -735,6 +733,17 @@
   setupAddEntry('expense', 'exp-cat', 'exp-amt', 'exp-add-btn');
   setupAddCat('income',  'inc-cat', 'inc-new-cat', 'inc-add-cat-btn');
   setupAddCat('expense', 'exp-cat', 'exp-new-cat', 'exp-add-cat-btn');
+
+  ['inc', 'exp'].forEach(function(pfx) {
+    var btn = document.getElementById(pfx + '-manage-btn');
+    var list = document.getElementById(pfx + '-cat-list');
+    btn.addEventListener('click', function() {
+      var open = list.style.display !== 'none';
+      list.style.display = open ? 'none' : 'flex';
+      btn.style.color = open ? 'var(--text2)' : 'var(--accent)';
+      btn.style.borderColor = open ? 'var(--border)' : 'var(--accent)';
+    });
+  });
 
   loadAll();
 })();
