@@ -22,15 +22,15 @@
   body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
 
   header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
-  header h1 { font-size: 1.15rem; font-weight: 700; }
+  header h1 { font-size: 1.35rem; font-weight: 700; }
   header h1 span { color: var(--accent); }
-  .period-row { display: flex; align-items: center; gap: 8px; }
-  .period-row select { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 6px 10px; border-radius: 8px; font-size: 0.88rem; cursor: pointer; }
+  .period-row { display: flex; align-items: center; gap: 6px; }
+  .period-row select { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 4px 7px; border-radius: 8px; font-size: 0.78rem; cursor: pointer; }
 
-  #sync-status { font-size: 0.75rem; padding: 4px 10px; border-radius: 20px; }
-  .sync-ok  { background: #43d98e22; color: var(--green); }
-  .sync-err { background: #ff6b6b22; color: var(--accent2); }
-  .sync-ing { background: #6c63ff22; color: var(--accent); }
+  #sync-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .sync-ok  { background: var(--green); }
+  .sync-err { background: var(--accent2); }
+  .sync-ing { background: var(--accent); opacity: 0.5; }
 
   nav { display: flex; gap: 2px; padding: 14px 24px 0; background: var(--bg); overflow-x: auto; }
   .nav-btn { padding: 9px 18px; border: none; background: transparent; color: var(--text2); border-radius: 8px 8px 0 0; cursor: pointer; font-size: 0.88rem; white-space: nowrap; border-bottom: 2px solid transparent; }
@@ -133,9 +133,9 @@
 <body>
 
 <header>
-  <h1>Ravi's <span>Tracker</span></h1>
+  <h1>RaviTej - <span>Paisa Tracker</span></h1>
   <div class="period-row">
-    <span id="sync-status" class="sync-ing">Connecting…</span>
+    <span id="sync-dot" class="sync-ing"></span>
     <select id="sel-month"></select>
     <select id="sel-year"></select>
   </div>
@@ -248,11 +248,9 @@
   var SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5jbHB3c213dXptYXRhcGVsZ3p6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNjUwMTcsImV4cCI6MjA5Njc0MTAxN30.Mx8pms-pf7l94_r889C6UAvcfJP5qfGUdu2jPixcejA';
   var sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 
-  var statusEl = document.getElementById('sync-status');
+  var statusEl = document.getElementById('sync-dot');
   function setStatus(s) {
-    var map = { ok: ['sync-ok','Synced ✓'], err: ['sync-err','Offline'], ing: ['sync-ing','Syncing…'] };
-    statusEl.className = map[s][0];
-    statusEl.textContent = map[s][1];
+    statusEl.className = s === 'ok' ? 'sync-ok' : s === 'err' ? 'sync-err' : 'sync-ing';
   }
 
   // ── In-memory cache ─────────────────────────────────────────────
